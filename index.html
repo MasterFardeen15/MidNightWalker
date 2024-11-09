@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Webcam Access</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        #videoContainer {
+            margin: 20px 0;
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        #videoElement {
+            width: 100%;
+            max-width: 640px;
+            border-radius: 8px;
+            display: none;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #errorMsg {
+            color: red;
+            margin: 10px 0;
+        }
+        .status {
+            margin: 10px 0;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Webcam Access Demo</h1>
+    
+    <div id="videoContainer">
+        <video id="videoElement" autoplay playsinline></video>
+    </div>
+    
+    <div>
+        <button id="startButton">Start Camera</button>
+        <button id="stopButton" style="display: none;">Stop Camera</button>
+    </div>
+    
+    <div id="errorMsg"></div>
+    <div class="status" id="statusMsg">Click 'Start Camera' to begin</div>
+
+    <script>
+        const videoElement = document.getElementById('videoElement');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const errorMsg = document.getElementById('errorMsg');
+        const statusMsg = document.getElementById('statusMsg');
+        let stream = null;
+
+        // Start camera
+        startButton.addEventListener('click', async () => {
+            try {
+                // Request camera access with front-facing camera preference
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' }
+                });
+                
+                // Display the video stream
+                videoElement.srcObject = stream;
+                videoElement.style.display = 'block';
+                
+                // Update UI
+                startButton.style.display = 'none';
+                stopButton.style.display = 'inline-block';
+                errorMsg.textContent = '';
+                statusMsg.textContent = 'Camera is active';
+                
+            } catch (err) {
+                errorMsg.textContent = 'Error accessing camera: ' + err.message;
+                statusMsg.textContent = 'Camera access denied';
+            }
+        });
+
+        // Stop camera
+        stopButton.addEventListener('click', () => {
+            if (stream) {
+                // Stop all tracks in the stream
+                stream.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+                videoElement.style.display = 'none';
+                
+                // Update UI
+                startButton.style.display = 'inline-block';
+                stopButton.style.display = 'none';
+                statusMsg.textContent = 'Camera stopped';
+            }
+        });
+
+        // Cleanup when page is closed/refreshed
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
