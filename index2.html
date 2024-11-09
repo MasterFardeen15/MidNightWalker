@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-time Object Detection</title>
+    <title>Object Detection with Distance</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <style>
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            max-width: 1200px;
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
+            background: #f0f0f0;
         }
         .container {
             display: flex;
@@ -26,90 +26,60 @@
             max-width: 640px;
             background: #000;
             border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        #video {
+        #video, #canvas {
             width: 100%;
-            display: block;
+            border-radius: 8px;
         }
         #canvas {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
         }
-        .controls {
-            margin: 20px 0;
+        .lightbulb {
+            width: 60px;
+            height: 60px;
+            background: #ffd700;
+            border-radius: 50%;
+            margin: 20px;
+            box-shadow: 0 0 20px #ffd700;
+            transition: all 0.3s ease;
         }
-        button {
+        .controls button {
             padding: 10px 20px;
-            font-size: 16px;
+            margin: 5px;
             background: #2563eb;
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: background-color 0.2s;
         }
-        button:hover {
-            background: #1d4ed8;
+        .controls button:disabled {
+            background: #93c5fd;
         }
-        button:disabled {
-            background: #94a3b8;
-            cursor: not-allowed;
-        }
-        .detection-list {
+        #detections {
             width: 100%;
             max-width: 640px;
             background: white;
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .detection-list h2 {
-            margin-top: 0;
-            color: #1e293b;
-        }
-        .detection-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .status {
-            text-align: center;
-            color: #64748b;
-            font-style: italic;
-        }
-        .error {
-            color: #dc2626;
-            padding: 10px;
-            border-radius: 6px;
-            background: #fee2e2;
-            margin: 10px 0;
-            text-align: center;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Real-time Object Detection</h1>
+        <h1>Object Detection & Distance Estimator</h1>
         <div class="video-container">
             <video id="video" autoplay playsinline></video>
             <canvas id="canvas"></canvas>
         </div>
+        <div class="lightbulb" id="lightbulb"></div>
         <div class="controls">
-            <button id="startBtn">Start Detection</button>
-            <button id="stopBtn" disabled>Stop Detection</button>
+            <button id="startBtn">Start</button>
+            <button id="stopBtn" disabled>Stop</button>
         </div>
-        <div id="status" class="status">Loading model...</div>
-        <div id="error" class="error" style="display: none;"></div>
-        <div class="detection-list">
-            <h2>Detected Objects</h2>
-            <div id="detectionsList"></div>
-        </div>
+        <div id="detections"></div>
     </div>
 
     <script>
@@ -118,169 +88,133 @@
         const ctx = canvas.getContext('2d');
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
-        const statusDiv = document.getElementById('status');
-        const errorDiv = document.getElementById('error');
-        const detectionsList = document.getElementById('detectionsList');
+        const detectionsDiv = document.getElementById('detections');
+        const lightbulb = document.getElementById('lightbulb');
 
         let model = null;
-        let stream = null;
-        let isDetecting = false;
-        let detectionsMap = new Map();
-        let animationId = null;
+        let isRunning = false;
 
-        // Load the COCO-SSD model
-        async function loadModel() {
+        // Estimate distance based on bounding box size
+        function estimateDistance(bbox) {
+            const boxArea = bbox[2] * bbox[3]; // width * height
+            const videoArea = canvas.width * canvas.height;
+            const areaRatio = boxArea / videoArea;
+            
+            // Rough distance estimation
+            if (areaRatio > 0.5) return "Very Close";
+            if (areaRatio > 0.3) return "Close";
+            if (areaRatio > 0.1) return "Medium";
+            return "Far";
+        }
+
+        // Update lightbulb brightness based on distance
+        function updateLightbulb(distance) {
+            const brightnesses = {
+                "Very Close": "1",
+                "Close": "0.7",
+                "Medium": "0.4",
+                "Far": "0.2"
+            };
+            const opacity = brightnesses[distance] || "0.2";
+            lightbulb.style.opacity = opacity;
+            lightbulb.style.boxShadow = `0 0 ${parseInt(opacity * 40)}px #ffd700`;
+        }
+
+        async function initializeDetection() {
             try {
                 model = await cocoSsd.load();
-                statusDiv.textContent = 'Model loaded. Click Start Detection to begin.';
                 startBtn.disabled = false;
             } catch (error) {
-                showError('Failed to load model: ' + error.message);
+                console.error('Error loading model:', error);
             }
         }
 
-        // Start the webcam
-        async function startCamera() {
+        async function startDetection() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' } 
-                });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
-                return new Promise((resolve) => {
-                    video.onloadedmetadata = () => {
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        resolve();
-                    };
-                });
+                await new Promise(resolve => video.onloadedmetadata = resolve);
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                isRunning = true;
+                
+                detectFrame();
             } catch (error) {
-                showError('Failed to access camera: ' + error.message);
-                throw error;
+                console.error('Error starting camera:', error);
             }
         }
 
-        // Perform object detection
-        async function detectObjects() {
-            if (!isDetecting) return;
+        function stopDetection() {
+            isRunning = false;
+            const stream = video.srcObject;
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            video.srcObject = null;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            detectionsDiv.innerHTML = '';
+            lightbulb.style.opacity = "0.2";
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        }
+
+        async function detectFrame() {
+            if (!isRunning) return;
 
             try {
                 const predictions = await model.detect(video);
                 
-                // Clear canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                detectionsDiv.innerHTML = '<h3>Detected Objects:</h3>';
                 
-                // Draw detections
+                let closestDistance = "Far";
+                
                 predictions.forEach(prediction => {
+                    const distance = estimateDistance(prediction.bbox);
+                    
+                    // Update closest distance
+                    if (["Very Close", "Close"].includes(distance)) {
+                        closestDistance = distance;
+                    }
+                    
                     // Draw bounding box
-                    ctx.strokeStyle = '#2563eb';
+                    ctx.strokeStyle = '#00ff00';
                     ctx.lineWidth = 2;
                     ctx.strokeRect(...prediction.bbox);
-
-                    // Draw label background
-                    ctx.fillStyle = '#2563eb';
-                    const textWidth = ctx.measureText(
-                        `${prediction.class} ${(prediction.score * 100).toFixed(1)}%`
-                    ).width;
-                    ctx.fillRect(
-                        prediction.bbox[0],
-                        prediction.bbox[1] - 25,
-                        textWidth + 10,
-                        25
-                    );
-
-                    // Draw label text
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = '16px sans-serif';
+                    
+                    // Draw label
+                    ctx.fillStyle = '#00ff00';
+                    ctx.font = '16px Arial';
                     ctx.fillText(
-                        `${prediction.class} ${(prediction.score * 100).toFixed(1)}%`,
-                        prediction.bbox[0] + 5,
-                        prediction.bbox[1] - 7
+                        `${prediction.class} (${distance})`,
+                        prediction.bbox[0],
+                        prediction.bbox[1] > 10 ? prediction.bbox[1] - 5 : 10
                     );
-
-                    // Update detections map
-                    if (!detectionsMap.has(prediction.class)) {
-                        detectionsMap.set(prediction.class, new Date().toLocaleTimeString());
-                        updateDetectionsList();
-                    }
+                    
+                    // Add to detections list
+                    detectionsDiv.innerHTML += `
+                        <div>${prediction.class} - ${distance} 
+                        (${Math.round(prediction.score * 100)}% confidence)</div>
+                    `;
                 });
-
-                // Schedule next detection
-                animationId = setTimeout(detectObjects, 500); // 2 FPS
+                
+                updateLightbulb(closestDistance);
+                
+                requestAnimationFrame(detectFrame);
             } catch (error) {
-                showError('Detection error: ' + error.message);
+                console.error('Error during detection:', error);
                 stopDetection();
             }
         }
 
-        // Update the detections list
-        function updateDetectionsList() {
-            detectionsList.innerHTML = '';
-            detectionsMap.forEach((time, object) => {
-                const div = document.createElement('div');
-                div.className = 'detection-item';
-                div.innerHTML = `
-                    <span>${object}</span>
-                    <span>First seen: ${time}</span>
-                `;
-                detectionsList.appendChild(div);
-            });
-        }
-
-        // Show error message
-        function showError(message) {
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-        }
-
-        // Start detection
-        async function startDetection() {
-            try {
-                startBtn.disabled = true;
-                await startCamera();
-                isDetecting = true;
-                stopBtn.disabled = false;
-                statusDiv.textContent = 'Detection running...';
-                errorDiv.style.display = 'none';
-                detectObjects();
-            } catch (error) {
-                startBtn.disabled = false;
-                showError('Failed to start detection: ' + error.message);
-            }
-        }
-
-        // Stop detection
-        function stopDetection() {
-            isDetecting = false;
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-            if (animationId) {
-                clearTimeout(animationId);
-                animationId = null;
-            }
-            video.srcObject = null;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            statusDiv.textContent = 'Detection stopped';
-        }
-
-        // Event listeners
         startBtn.addEventListener('click', startDetection);
         stopBtn.addEventListener('click', stopDetection);
-
-        // Initialize
-        startBtn.disabled = true;
-        stopBtn.disabled = true;
-        loadModel();
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-        });
+        
+        initializeDetection();
     </script>
 </body>
 </html>
