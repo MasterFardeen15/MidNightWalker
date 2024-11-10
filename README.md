@@ -1,4 +1,4 @@
-# MidNight Walker
+# Midnight Walker
 
 we're the midnight walkers
 
