@@ -324,3 +324,43 @@ footer {
 .embedded-video {
     margin-bottom: 3rem; /* Adds space between video and live demo */
 }
+
+/* main page */
+
+.project-description {
+    max-width: 800px;
+    margin: 2rem auto 4rem;
+    padding: 2rem;
+    background: rgba(45, 45, 45, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.project-description h2 {
+    color: #4ade80;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    text-align: center;
+}
+
+.description-content {
+    color: #ffffff;
+    line-height: 1.6;
+}
+
+.description-content p {
+    margin-bottom: 1.5rem;
+}
+
+.description-content ul {
+    margin: 0 0 1.5rem 1.5rem;
+}
+
+.description-content li {
+    margin-bottom: 0.5rem;
+    color: #e0e0e0;
+}
+
+.description-content p:last-child {
+    margin-bottom: 0;
+}
