@@ -1,0 +1,326 @@
+:root {
+    --primary-color: #2563eb;
+    --secondary-color: #059669;
+    --background-color: #1a1a1a;
+    --text-color: #ffffff;
+    --accent-color: #4ade80;
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header styles */
+header {
+    background-color: rgba(26, 26, 26, 0.95);
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 2px solid var(--secondary-color);
+}
+
+nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-links a {
+    color: var(--text-color);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.nav-links a:hover {
+    background-color: var(--secondary-color);
+}
+
+.nav-links a.active {
+    background-color: var(--secondary-color);
+}
+
+/* Main content styles */
+main {
+    flex: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 20px;
+}
+
+h1 {
+    color: var(--accent-color);
+    margin-bottom: 2rem;
+}
+
+h2 {
+    color: var(--secondary-color);
+    margin: 2rem 0 1rem;
+}
+
+/* Video and demo styles */
+.video-container {
+    width: 100%;
+    position: relative;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#video {
+    width: 100%;
+    display: block;
+}
+
+#canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.embedded-video {
+    width: 100%;
+    max-width: 640px;
+    margin: 2rem auto;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.embedded-video video {
+    width: 100%;
+    display: block;
+    border-radius: 8px;
+}
+
+/* Controls and status */
+.controls {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin: 20px 0;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+button:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+}
+
+.status {
+    width: 100%;
+    text-align: center;
+    color: var(--text-color);
+    font-style: italic;
+}
+
+.error {
+    color: #dc2626;
+    padding: 10px;
+    border-radius: 6px;
+    background: #fee2e2;
+}
+
+.lightbulbs-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    padding: 20px;
+    background: #333;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+.bulb {
+    width: 30px;
+    height: 50px;
+    transition: filter 0.3s ease;
+}
+
+/* about us */
+
+/* Update these styles in your styles.css file */
+
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    padding: 1rem;
+}
+
+.team-card {
+    background: rgba(45, 45, 45, 0.95); /* Darker, more solid background */
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.team-card h2 {
+    color: #4ade80; /* The green color from your screenshot */
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+}
+
+.team-card .role {
+    color: #a0a0a0;
+    font-size: 1rem;
+    margin: 0 0 0.5rem 0;
+}
+
+.team-card .title {
+    color: #ffffff;
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.team-card .email {
+    color: #888;
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+}
+
+.contact-btn {
+    display: inline-block;
+    background-color: #059669;
+    color: white;
+    padding: 0.8rem;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+    text-align: center;
+    margin-top: auto; /* Pushes button to bottom of card */
+    border: none;
+    cursor: pointer;
+}
+
+.contact-btn:hover {
+    background-color: #047857;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .team-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        padding: 0.5rem;
+    }
+}
+
+.team-intro {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto 3rem;
+    color: #ffffff;
+    line-height: 1.6;
+}
+
+/* footer */
+
+footer {
+    background-color: var(--background-color);
+    padding: 2rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.footer-section h3 {
+    color: #ffffff;
+    font-size: 1rem;
+    margin: 0 0 0.75rem 0;
+}
+
+.footer-section p {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0.25rem 0;
+    font-size: 0.9rem;
+}
+
+.footer-section:first-child p {
+    margin-bottom: 2rem;
+}
+
+.social-links {
+    display: flex;
+    gap: 1rem;
+}
+
+.social-links a {
+    color: #0000FF; /* Link blue color */
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.social-links a:hover {
+    text-decoration: underline;
+}
+
+/* Remove the grid layout and old footer styles */
+.footer-content {
+    display: block; /* Changed from grid to block */
+}
+
+/* Organizing index.html */
+
+.section-title {
+    color: #4ade80; /* Matches the green color scheme */
+    font-size: 1.5rem;
+    margin: 2rem 0 1rem;
+    text-align: center;
+}
+
+/* Add some spacing between sections */
+.embedded-video {
+    margin-bottom: 3rem; /* Adds space between video and live demo */
+}

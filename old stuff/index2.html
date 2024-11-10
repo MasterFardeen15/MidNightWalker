@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object Detection with Distance</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            background: #000;
+            border-radius: 8px;
+        }
+        #video, #canvas {
+            width: 100%;
+            border-radius: 8px;
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .lightbulb {
+            width: 60px;
+            height: 60px;
+            background: #ffd700;
+            border-radius: 50%;
+            margin: 20px;
+            box-shadow: 0 0 20px #ffd700;
+            transition: all 0.3s ease;
+        }
+        .controls button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .controls button:disabled {
+            background: #93c5fd;
+        }
+        #detections {
+            width: 100%;
+            max-width: 640px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Object Detection & Distance Estimator</h1>
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        <div class="lightbulb" id="lightbulb"></div>
+        <div class="controls">
+            <button id="startBtn">Start</button>
+            <button id="stopBtn" disabled>Stop</button>
+        </div>
+        <div id="detections"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const detectionsDiv = document.getElementById('detections');
+        const lightbulb = document.getElementById('lightbulb');
+
+        let model = null;
+        let isRunning = false;
+
+        // Estimate distance based on bounding box size
+        function estimateDistance(bbox) {
+            const boxArea = bbox[2] * bbox[3]; // width * height
+            const videoArea = canvas.width * canvas.height;
+            const areaRatio = boxArea / videoArea;
+            
+            // Rough distance estimation
+            if (areaRatio > 0.5) return "Very Close";
+            if (areaRatio > 0.3) return "Close";
+            if (areaRatio > 0.1) return "Medium";
+            return "Far";
+        }
+
+        // Update lightbulb brightness based on distance
+        function updateLightbulb(distance) {
+            const brightnesses = {
+                "Very Close": "1",
+                "Close": "0.7",
+                "Medium": "0.4",
+                "Far": "0.2"
+            };
+            const opacity = brightnesses[distance] || "0.2";
+            lightbulb.style.opacity = opacity;
+            lightbulb.style.boxShadow = `0 0 ${parseInt(opacity * 40)}px #ffd700`;
+        }
+
+        async function initializeDetection() {
+            try {
+                model = await cocoSsd.load();
+                startBtn.disabled = false;
+            } catch (error) {
+                console.error('Error loading model:', error);
+            }
+        }
+
+        async function startDetection() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                await new Promise(resolve => video.onloadedmetadata = resolve);
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                isRunning = true;
+                
+                detectFrame();
+            } catch (error) {
+                console.error('Error starting camera:', error);
+            }
+        }
+
+        function stopDetection() {
+            isRunning = false;
+            const stream = video.srcObject;
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            video.srcObject = null;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            detectionsDiv.innerHTML = '';
+            lightbulb.style.opacity = "0.2";
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        }
+
+        async function detectFrame() {
+            if (!isRunning) return;
+
+            try {
+                const predictions = await model.detect(video);
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                detectionsDiv.innerHTML = '<h3>Detected Objects:</h3>';
+                
+                let closestDistance = "Far";
+                
+                predictions.forEach(prediction => {
+                    const distance = estimateDistance(prediction.bbox);
+                    
+                    // Update closest distance
+                    if (["Very Close", "Close"].includes(distance)) {
+                        closestDistance = distance;
+                    }
+                    
+                    // Draw bounding box
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(...prediction.bbox);
+                    
+                    // Draw label
+                    ctx.fillStyle = '#00ff00';
+                    ctx.font = '16px Arial';
+                    ctx.fillText(
+                        `${prediction.class} (${distance})`,
+                        prediction.bbox[0],
+                        prediction.bbox[1] > 10 ? prediction.bbox[1] - 5 : 10
+                    );
+                    
+                    // Add to detections list
+                    detectionsDiv.innerHTML += `
+                        <div>${prediction.class} - ${distance} 
+                        (${Math.round(prediction.score * 100)}% confidence)</div>
+                    `;
+                });
+                
+                updateLightbulb(closestDistance);
+                
+                requestAnimationFrame(detectFrame);
+            } catch (error) {
+                console.error('Error during detection:', error);
+                stopDetection();
+            }
+        }
+
+        startBtn.addEventListener('click', startDetection);
+        stopBtn.addEventListener('click', stopDetection);
+        
+        initializeDetection();
+    </script>
+</body>
+</html>
